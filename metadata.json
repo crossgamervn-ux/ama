@@ -1,0 +1,6 @@
+{
+  "name": "BAR Randomizer Log Parser",
+  "description": "A specialized tool to parse 'infolog.txt' files from Beyond All Reason (BAR) and extract randomized unit modification data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
