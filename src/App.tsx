@@ -485,23 +485,23 @@ Beyond All Reason.
                               </span>
                             </td>
                             <td className="px-4 py-4">
-                              <div className="flex items-center gap-5">
+                              <div className="flex items-center gap-4">
                                 {getUnitImage(item.unitId) ? (
                                   <img 
                                     src={getUnitImage(item.unitId)!} 
                                     alt={getUnitName(item.unitId)} 
-                                    className="w-20 h-20 sm:w-24 sm:h-24 rounded object-cover bg-slate-800/80 border border-white/10 shadow-lg" 
+                                    className="w-14 h-14 rounded object-cover bg-slate-800/80 border border-white/10" 
                                     referrerPolicy="no-referrer"
                                   />
                                 ) : (
-                                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded bg-slate-800/80 border border-white/5 flex items-center justify-center shadow-lg">
-                                    <Gamepad2 className="w-8 h-8 text-slate-600" />
+                                  <div className="w-14 h-14 rounded bg-slate-800/80 border border-white/5 flex items-center justify-center">
+                                    <Gamepad2 className="w-6 h-6 text-slate-600" />
                                   </div>
                                 )}
-                                <div className="flex-1">
-                                  <div className="text-base font-bold text-slate-200 leading-tight">{getUnitName(item.unitId)}</div>
-                                  <div className="font-mono text-xs text-cyan-400 mt-1 leading-tight">{item.unitId}</div>
-                                  <div className="text-xs text-slate-500 mt-1 leading-tight max-w-sm">{getUnitDescription(item.unitId)}</div>
+                                <div>
+                                  <div className="text-sm font-bold text-slate-200 leading-tight">{getUnitName(item.unitId)}</div>
+                                  <div className="font-mono text-[11px] text-cyan-400 mt-1 leading-tight">{item.unitId}</div>
+                                  <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">{getUnitDescription(item.unitId)}</div>
                                 </div>
                               </div>
                             </td>
