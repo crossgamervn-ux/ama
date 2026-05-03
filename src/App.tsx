@@ -38,8 +38,10 @@ interface FactionInfo {
 
 export default function App() {
   const [isDragging, setIsDragging] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [fileContent, setFileContent] = useState<string>('');
   const [results, setResults] = useState<ParsedUnit[]>([]);
+  const [factionFilter, setFactionFilter] = useState<'ALL' | 'Armada' | 'Cortex' | 'Legion' | 'Scavenger' | 'Events' | 'Other'>('ALL');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -302,6 +304,11 @@ Beyond All Reason.
     }
   };
 
+  const filteredResults = results.filter(item => {
+    if (factionFilter === 'ALL') return true;
+    return getFactionInfo(item.unitId).name === factionFilter;
+  });
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans relative overflow-hidden flex flex-col p-4 md:p-8">
       {/* Background Ambient Glows */}
@@ -422,10 +429,23 @@ Beyond All Reason.
             {results.length > 0 ? (
               <>
                 {/* Table Toolbar */}
-                <div className="px-6 py-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="px-3 py-1 bg-blue-500 text-white text-[10px] font-bold rounded-full">{results.length} UNITS FOUND</div>
-                    <div className="px-3 py-1 bg-slate-800 text-slate-400 text-[10px] font-bold rounded-full">LATEST GAME BLOCK</div>
+                <div className="px-6 py-4 border-b border-white/10 bg-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="px-3 py-1 bg-blue-500 text-white text-[10px] font-bold rounded-full">{filteredResults.length} UNITS</div>
+                    <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
+                    {['ALL', 'Armada', 'Cortex', 'Legion', 'Scavenger', 'Events', 'Other'].map(faction => (
+                      <button
+                        key={faction}
+                        onClick={() => setFactionFilter(faction as any)}
+                        className={`px-3 py-1 text-[10px] font-bold rounded-full transition-colors uppercase tracking-widest ${
+                          factionFilter === faction 
+                            ? 'bg-indigo-500 text-white' 
+                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200 border border-white/5'
+                        }`}
+                      >
+                        {faction}
+                      </button>
+                    ))}
                   </div>
                   <button 
                     onClick={handleCopy}
@@ -454,7 +474,7 @@ Beyond All Reason.
                       </tr>
                     </thead>
                     <tbody className="text-sm">
-                      {results.map((item, index) => {
+                      {filteredResults.map((item, index) => {
                         const faction = getFactionInfo(item.unitId);
                         return (
                           <tr key={index} className={`border-b border-white/5 ${index % 2 === 0 ? 'bg-white/5' : ''}`}>
@@ -465,23 +485,23 @@ Beyond All Reason.
                               </span>
                             </td>
                             <td className="px-4 py-4">
-                              <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-5">
                                 {getUnitImage(item.unitId) ? (
                                   <img 
                                     src={getUnitImage(item.unitId)!} 
                                     alt={getUnitName(item.unitId)} 
-                                    className="w-14 h-14 rounded object-cover bg-slate-800/80 border border-white/10" 
+                                    className="w-20 h-20 sm:w-24 sm:h-24 rounded object-cover bg-slate-800/80 border border-white/10 shadow-lg" 
                                     referrerPolicy="no-referrer"
                                   />
                                 ) : (
-                                  <div className="w-14 h-14 rounded bg-slate-800/80 border border-white/5 flex items-center justify-center">
-                                    <Gamepad2 className="w-6 h-6 text-slate-600" />
+                                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded bg-slate-800/80 border border-white/5 flex items-center justify-center shadow-lg">
+                                    <Gamepad2 className="w-8 h-8 text-slate-600" />
                                   </div>
                                 )}
-                                <div>
-                                  <div className="text-sm font-bold text-slate-200 leading-tight">{getUnitName(item.unitId)}</div>
-                                  <div className="font-mono text-[11px] text-cyan-400 mt-1 leading-tight">{item.unitId}</div>
-                                  <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">{getUnitDescription(item.unitId)}</div>
+                                <div className="flex-1">
+                                  <div className="text-base font-bold text-slate-200 leading-tight">{getUnitName(item.unitId)}</div>
+                                  <div className="font-mono text-xs text-cyan-400 mt-1 leading-tight">{item.unitId}</div>
+                                  <div className="text-xs text-slate-500 mt-1 leading-tight max-w-sm">{getUnitDescription(item.unitId)}</div>
                                 </div>
                               </div>
                             </td>
