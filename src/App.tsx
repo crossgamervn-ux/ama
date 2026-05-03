@@ -17,6 +17,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import unitData from './units.json';
+import unitImagesData from './units_data.json';
+
+const unitImagesLower = Object.entries(unitImagesData).reduce((acc, [key, value]) => {
+  acc[key.toLowerCase()] = value as string;
+  return acc;
+}, {} as Record<string, string>);
 
 interface ParsedUnit {
   unitId: string;
@@ -66,6 +72,11 @@ export default function App() {
   const getUnitDescription = (unitId: string): string => {
     const rawDesc = (unitData.units.descriptions as Record<string, string>)[unitId.toLowerCase()];
     return rawDesc || 'No description available';
+  };
+
+  const getUnitImage = (unitId: string): string | null => {
+    const name = getUnitName(unitId).toLowerCase();
+    return unitImagesLower[name] || null;
   };
 
   const getPrefixColorClass = (prefix: string) => {
@@ -453,9 +464,25 @@ Beyond All Reason.
                               </span>
                             </td>
                             <td className="px-4 py-4">
-                              <div className="font-mono text-cyan-400">{item.unitId}</div>
-                              <div className="text-[11px] text-slate-300 mt-1 font-bold">{getUnitName(item.unitId)}</div>
-                              <div className="text-[10px] text-slate-500 mt-0.5">{getUnitDescription(item.unitId)}</div>
+                              <div className="flex items-center gap-4">
+                                {getUnitImage(item.unitId) ? (
+                                  <img 
+                                    src={getUnitImage(item.unitId)!} 
+                                    alt={getUnitName(item.unitId)} 
+                                    className="w-14 h-14 rounded object-cover bg-slate-800/80 border border-white/10" 
+                                    referrerPolicy="no-referrer"
+                                  />
+                                ) : (
+                                  <div className="w-14 h-14 rounded bg-slate-800/80 border border-white/5 flex items-center justify-center">
+                                    <Gamepad2 className="w-6 h-6 text-slate-600" />
+                                  </div>
+                                )}
+                                <div>
+                                  <div className="font-mono text-cyan-400 leading-tight">{item.unitId}</div>
+                                  <div className="text-[11px] text-slate-300 mt-1 font-bold leading-tight">{getUnitName(item.unitId)}</div>
+                                  <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">{getUnitDescription(item.unitId)}</div>
+                                </div>
+                              </div>
                             </td>
                             <td className="px-6 py-4">
                               <span className={getPrefixColorClass(item.prefix)}>{item.prefix}</span>
