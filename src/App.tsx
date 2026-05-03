@@ -449,7 +449,7 @@ Beyond All Reason.
                       <tr>
                         <th className="text-left px-6 py-4 font-semibold border-b border-white/10">#</th>
                         <th className="text-left px-4 py-4 font-semibold border-b border-white/10">Faction</th>
-                        <th className="text-left px-4 py-4 font-semibold border-b border-white/10">Unit ID</th>
+                        <th className="text-left px-4 py-4 font-semibold border-b border-white/10">Unit</th>
                         <th className="text-left px-6 py-4 font-semibold border-b border-white/10">Modification Prefix</th>
                       </tr>
                     </thead>
@@ -479,8 +479,8 @@ Beyond All Reason.
                                   </div>
                                 )}
                                 <div>
-                                  <div className="font-mono text-cyan-400 leading-tight">{item.unitId}</div>
-                                  <div className="text-[11px] text-slate-300 mt-1 font-bold leading-tight">{getUnitName(item.unitId)}</div>
+                                  <div className="text-sm font-bold text-slate-200 leading-tight">{getUnitName(item.unitId)}</div>
+                                  <div className="font-mono text-[11px] text-cyan-400 mt-1 leading-tight">{item.unitId}</div>
                                   <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">{getUnitDescription(item.unitId)}</div>
                                 </div>
                               </div>
