@@ -138,27 +138,33 @@ export default function App() {
 
   const parseLogContent = (content: string) => {
     const lines = content.split(/\r?\n/);
-    const allBlocks: ParsedUnit[][] = [];
-    let currentBlock: ParsedUnit[] = [];
+    
+    // Dùng Map để lưu, giúp tự động gộp dữ liệu từ nhiều block 
+    // và lọc trùng lặp unit (nếu log lặp lại)
+    const currentMatchMap = new Map<string, ParsedUnit>();
     let isListing = false;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
+      // Phát hiện khi game khởi động lại hoặc load map mới
+      // Xóa toàn bộ dữ liệu cũ để không bị lẫn log của trận trước
+      if (line.includes('LogOutput initialized') || 
+          line.includes('Loading map') || 
+          line.includes('============== <App>')) {
+        currentMatchMap.clear();
+        isListing = false;
+      }
+
       if (line.includes('tweakdefs_rename_get_ready')) {
         isListing = true;
-        currentBlock = [];
       } else if (line.includes('tweakdefs_rename_end')) {
-        if (isListing) {
-          isListing = false;
-          if (currentBlock.length > 0) {
-            allBlocks.push(currentBlock);
-          }
-        }
+        isListing = false;
       } else if (isListing) {
+        // Dùng Regex để tách đúng định dạng /(unitId/-prefix/-[ModName])/
         const match = line.match(/\/\((.*?)\/-(.*?)\/-(.*?)\/\)/);
         if (match && match[2] === "prefix") {
-          currentBlock.push({
+          currentMatchMap.set(match[1], {
             unitId: match[1],
             prefix: match[3]
           });
@@ -166,15 +172,9 @@ export default function App() {
       }
     }
 
-    // [FIX LOGIC] Xử lý trường hợp game crash / tắt ngang, 
-    // không có cờ 'tweakdefs_rename_end' ở cuối file log.
-    if (isListing && currentBlock.length > 0) {
-      allBlocks.push(currentBlock);
-    }
-
     setLoading(false);
 
-    if (allBlocks.length === 0) {
+    if (currentMatchMap.size === 0) {
       setError("Không tìm thấy dữ liệu mod trong file log này. Có thể mod BARandom chưa được kích hoạt hoặc trận đấu chưa bắt đầu.");
       return;
     }
@@ -198,7 +198,8 @@ export default function App() {
       return 0;
     };
 
-    const latestBlock = [...allBlocks[allBlocks.length - 1]].sort((a, b) => {
+    // Chuyển từ Map sang Array và giữ nguyên logic sort cũ của bạn
+    const latestBlock = Array.from(currentMatchMap.values()).sort((a, b) => {
       const weightA = getPrefixWeight(a.prefix);
       const weightB = getPrefixWeight(b.prefix);
       if (weightA !== weightB) {
