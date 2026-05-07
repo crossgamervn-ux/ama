@@ -67,7 +67,7 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [fileContent, setFileContent] = useState<string>('');
   const [results, setResults] = useState<ParsedUnit[]>([]);
-  const [factionFilter, setFactionFilter] = useState<'ALL' | 'Armada' | 'Cortex' | 'Legion' | 'Scavenger' | 'Events' | 'Eco' | 'Other'>('ALL');
+  const [factionFilter, setFactionFilter] = useState<'ALL' | 'Armada' | 'Cortex' | 'Legion' | 'Scavenger' | 'Events' | 'Eco' | 'Sniper' | 'Other'>('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
@@ -246,6 +246,11 @@ export default function App() {
       if (isEcoA && !isEcoB) return -1;
       if (!isEcoA && isEcoB) return 1;
 
+      const isSniperA = a.prefix.toLowerCase().includes('sniper');
+      const isSniperB = b.prefix.toLowerCase().includes('sniper');
+      if (isSniperA && !isSniperB) return -1;
+      if (!isSniperA && isSniperB) return 1;
+
       return a.unitId.localeCompare(b.unitId);
     });
 
@@ -346,6 +351,7 @@ Beyond All Reason.
   const filteredResults = results.filter(item => {
     if (factionFilter === 'ALL') return true;
     if (factionFilter === 'Eco') return isEcoUnit(item.unitId);
+    if (factionFilter === 'Sniper') return item.prefix.toLowerCase().includes('sniper');
     return getFactionInfo(item.unitId).name === factionFilter;
   });
 
@@ -473,7 +479,7 @@ Beyond All Reason.
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="px-3 py-1 bg-blue-500 text-white text-[10px] font-bold rounded-full">{filteredResults.length} UNITS</div>
                     <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
-                    {['ALL', 'Armada', 'Cortex', 'Legion', 'Scavenger', 'Events', 'Eco', 'Other'].map(faction => (
+                    {['ALL', 'Armada', 'Cortex', 'Legion', 'Scavenger', 'Events', 'Eco', 'Sniper', 'Other'].map(faction => (
                       <button
                         key={faction}
                         onClick={() => setFactionFilter(faction as any)}
