@@ -19,10 +19,37 @@ import { motion, AnimatePresence } from 'motion/react';
 import unitData from './units.json';
 import unitImagesData from './units_data.json';
 
-const unitImagesLower = Object.entries(unitImagesData).reduce((acc, [key, value]) => {
-  acc[key.toLowerCase()] = value as string;
-  return acc;
-}, {} as Record<string, string>);
+const assignedImages: Record<string, string> = {};
+const availableImages = new Set(Object.values(unitImagesData as Record<string, string>));
+const allUnitIds = Object.keys(unitData.units.names as Record<string, string>);
+
+allUnitIds.forEach(unitId => {
+  const lowerId = unitId.toLowerCase();
+  for (const url of Array.from(availableImages)) {
+    const match = url.match(/_([^_.]+)\.webp$/i);
+    if (match && match[1].toLowerCase() === lowerId) {
+      assignedImages[lowerId] = url;
+      availableImages.delete(url);
+      break;
+    }
+  }
+});
+
+allUnitIds.forEach(unitId => {
+  const lowerId = unitId.toLowerCase();
+  if (!assignedImages[lowerId]) {
+    const unitNameLower = ((unitData.units.names as Record<string, string>)[unitId] || '').toLowerCase();
+    if (unitNameLower) {
+      const nameMatch = Object.entries(unitImagesData as Record<string, string>).find(
+        ([name, url]) => name.toLowerCase() === unitNameLower && availableImages.has(url)
+      );
+      if (nameMatch) {
+        assignedImages[lowerId] = nameMatch[1];
+        availableImages.delete(nameMatch[1]);
+      }
+    }
+  }
+});
 
 interface ParsedUnit {
   unitId: string;
@@ -40,14 +67,21 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [fileContent, setFileContent] = useState<string>('');
   const [results, setResults] = useState<ParsedUnit[]>([]);
-  const [factionFilter, setFactionFilter] = useState<'ALL' | 'Armada' | 'Cortex' | 'Legion' | 'Scavenger' | 'Events' | 'Other'>('ALL');
+  const [factionFilter, setFactionFilter] = useState<'ALL' | 'Armada' | 'Cortex' | 'Legion' | 'Scavenger' | 'Events' | 'Eco' | 'Other'>('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isEcoUnit = (unitId: string): boolean => {
+    const name = getUnitName(unitId).toLowerCase();
+    const desc = getUnitDescription(unitId).toLowerCase();
+    return ['metal', 'tidal', 'solar', 'energy', 'wind', 'geothermal', 'fusion', 'storage', 'converter', 'maker'].some(k => name.includes(k) || desc.includes(k));
+  };
+
   const getFactionInfo = (unitId: string): FactionInfo => {
     const id = unitId.toLowerCase();
+
     if (id.startsWith('arm')) {
       return { name: 'Armada', color: 'text-blue-300', bg: 'bg-blue-900/40', border: 'border-blue-500/50' };
     }
@@ -77,8 +111,7 @@ export default function App() {
   };
 
   const getUnitImage = (unitId: string): string | null => {
-    const name = getUnitName(unitId).toLowerCase();
-    return unitImagesLower[name] || null;
+    return assignedImages[unitId.toLowerCase()] || null;
   };
 
   const getPrefixColorClass = (prefix: string) => {
@@ -207,6 +240,12 @@ export default function App() {
       if (weightA !== weightB) {
         return weightB - weightA;
       }
+      
+      const isEcoA = isEcoUnit(a.unitId);
+      const isEcoB = isEcoUnit(b.unitId);
+      if (isEcoA && !isEcoB) return -1;
+      if (!isEcoA && isEcoB) return 1;
+
       return a.unitId.localeCompare(b.unitId);
     });
 
@@ -306,6 +345,7 @@ Beyond All Reason.
 
   const filteredResults = results.filter(item => {
     if (factionFilter === 'ALL') return true;
+    if (factionFilter === 'Eco') return isEcoUnit(item.unitId);
     return getFactionInfo(item.unitId).name === factionFilter;
   });
 
@@ -433,7 +473,7 @@ Beyond All Reason.
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="px-3 py-1 bg-blue-500 text-white text-[10px] font-bold rounded-full">{filteredResults.length} UNITS</div>
                     <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
-                    {['ALL', 'Armada', 'Cortex', 'Legion', 'Scavenger', 'Events', 'Other'].map(faction => (
+                    {['ALL', 'Armada', 'Cortex', 'Legion', 'Scavenger', 'Events', 'Eco', 'Other'].map(faction => (
                       <button
                         key={faction}
                         onClick={() => setFactionFilter(faction as any)}
