@@ -67,11 +67,18 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [fileContent, setFileContent] = useState<string>('');
   const [results, setResults] = useState<ParsedUnit[]>([]);
+  const [parserMode, setParserMode] = useState<'barandom' | 'suppressor'>('barandom');
   const [factionFilter, setFactionFilter] = useState<'ALL' | 'Armada' | 'Cortex' | 'Legion' | 'Scavenger' | 'Events' | 'Eco' | 'Sniper' | 'Other'>('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (fileContent.trim().length > 0) {
+      parseLogContent(fileContent);
+    }
+  }, [parserMode]);
 
   const isEcoUnit = (unitId: string): boolean => {
     const name = getUnitName(unitId).toLowerCase();
@@ -117,6 +124,21 @@ export default function App() {
   const getPrefixColorClass = (prefix: string) => {
     const p = prefix.toLowerCase();
     
+    if (parserMode === 'suppressor') {
+      if (p.includes('cursed') || p.includes('malicious')) return 'text-red-500 font-bold';
+      const mkMatch = p.match(/m?k\.?\s*(\d+)/);
+      if (mkMatch) {
+        const val = parseInt(mkMatch[1], 10);
+        if (val >= 30) return 'text-rose-500 font-extrabold animate-pulse';
+        if (val >= 25) return 'text-orange-400 font-black';
+        if (val >= 20) return 'text-yellow-400 font-bold';
+        if (val >= 15) return 'text-purple-400 font-bold';
+        if (val >= 10) return 'text-blue-400 font-medium';
+        return 'text-green-400 text-sm';
+      }
+      return 'text-slate-400 text-sm';
+    }
+
     if (p.includes('cursed') || p.includes('malicious')) return 'text-red-500 font-bold';
     
     if (p.includes('mggw') || p.includes('ambo') || p.includes('beyond') || p.includes('super sayan') || p.includes('error') || p.includes(' god ') || p === 'god' || p.includes('admin')) {
@@ -162,6 +184,7 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
+      setFileContent(content);
       parseLogContent(content);
     };
     reader.onerror = () => {
@@ -173,17 +196,12 @@ export default function App() {
 
   const parseLogContent = (content: string) => {
     const lines = content.split(/\r?\n/);
-    
-    // Dùng Map để lưu, giúp tự động gộp dữ liệu từ nhiều block 
-    // và lọc trùng lặp unit (nếu log lặp lại)
     const currentMatchMap = new Map<string, ParsedUnit>();
+    
     let isListing = false;
-
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
-      // Phát hiện khi game khởi động lại hoặc load map mới
-      // Xóa toàn bộ dữ liệu cũ để không bị lẫn log của trận trước
       if (line.includes('LogOutput initialized') || 
           line.includes('Loading map') || 
           line.includes('============== <App>')) {
@@ -196,7 +214,6 @@ export default function App() {
       } else if (line.includes('tweakdefs_rename_end')) {
         isListing = false;
       } else if (isListing) {
-        // Dùng Regex để tách đúng định dạng /(unitId/-prefix/-[ModName])/
         const match = line.match(/\/\((.*?)\/-(.*?)\/-(.*?)\/\)/);
         if (match && match[2] === "prefix") {
           currentMatchMap.set(match[1], {
@@ -204,17 +221,43 @@ export default function App() {
             prefix: match[3]
           });
         }
+      } else {
+        // Fallback for directly pasted output text: [Faction] unitId (Name - Desc): Prefix
+        const directMatch = line.match(/^\[.*?\]\s+([^\s]+)\s+\([^)]+\):\s+(.*)$/);
+        if (directMatch) {
+          currentMatchMap.set(directMatch[1], {
+            unitId: directMatch[1],
+            prefix: directMatch[2].trim()
+          });
+        }
       }
     }
 
     setLoading(false);
-
+    
     if (currentMatchMap.size === 0) {
-      setError("Không tìm thấy dữ liệu mod trong file log này. Có thể mod BARandom chưa được kích hoạt hoặc trận đấu chưa bắt đầu.");
+      setResults([]);
+      setError(`Không tìm thấy dữ liệu mod trong file log hoặc text này. Vui lòng kiểm tra lại.`);
       return;
     }
+    
+    setError(null);
 
     const getPrefixWeight = (prefix: string): number => {
+      // In Suppressor mode, sort by MK number
+      if (parserMode === 'suppressor') {
+        const p = prefix.toLowerCase();
+        let value = 0;
+        const mkMatch = p.match(/m?k\.?\s*(\d+)/);
+        if (mkMatch) {
+            value = parseInt(mkMatch[1], 10);
+        }
+        // If it's cursed, you might want to penalize it or handle it separately, 
+        // but user says "MK càng cao càng mạnh", we'll just use MK value.
+        // If we want cursed to be at bottom, we can do:
+        if (p.includes('cursed')) return -value; 
+        return value;
+      }
       const p = prefix.toLowerCase();
       const order = [
         'uncommon', 'rare', 'exceptional', 'epic', 'exotic', 'legendary', 
@@ -257,13 +300,13 @@ export default function App() {
     setResults(latestBlock);
   };
 
-  const onDrop = useCallback((e: React.DragEvent) => {
+  const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files.length) {
       processFile(e.dataTransfer.files[0]);
     }
-  }, []);
+  };
 
   const handleCopy = async () => {
     if (results.length === 0) return;
@@ -373,14 +416,32 @@ Beyond All Reason.
             <div>
               <h1 className="text-2xl font-black tracking-wider text-white uppercase">BAR Randomizer Log Parser</h1>
               <p className="text-slate-400 text-xs font-mono uppercase tracking-widest">
-                Status: <span className="text-blue-400">{results.length > 0 ? "Ready to Analyze" : "Awaiting InfoLog"}</span> | Build 0.4.2
+                Status: <span className="text-blue-400">{results.length > 0 ? "Ready to Analyze" : "Awaiting InfoLog"}</span> | Build 0.4.3
               </p>
             </div>
           </div>
-          <div className="flex gap-4">
-            <div className="text-right">
+          <div className="flex gap-4 items-center">
+            <div className="flex bg-slate-900 rounded-lg p-1 border border-white/10">
+              <button
+                onClick={() => setParserMode('barandom')}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-md transition-colors ${
+                  parserMode === 'barandom' ? 'bg-blue-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                BARandom
+              </button>
+              <button
+                onClick={() => setParserMode('suppressor')}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-md transition-colors ${
+                  parserMode === 'suppressor' ? 'bg-red-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Suppressor
+              </button>
+            </div>
+            <div className="text-right hidden sm:block">
               <p className="text-[10px] text-slate-500 uppercase">Current Mod</p>
-              <p className="text-sm font-bold text-slate-300">tweakdefs_rename_v2</p>
+              <p className="text-sm font-bold text-slate-300">{parserMode === 'barandom' ? 'tweakdefs_rename_v2' : 'suppressor_mk'}</p>
             </div>
           </div>
         </header>
@@ -418,6 +479,20 @@ Beyond All Reason.
                 <span className="text-[10px] text-slate-500 mt-1 uppercase">Max size 10MB</span>
               </div>
               
+              <div className="mt-4">
+                <textarea 
+                  className="w-full h-24 bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors custom-scrollbar"
+                  placeholder="Or paste your log text here..."
+                  value={fileContent}
+                  onChange={(e) => {
+                    setFileContent(e.target.value);
+                    if (e.target.value.trim().length > 0) {
+                      parseLogContent(e.target.value);
+                    }
+                  }}
+                ></textarea>
+              </div>
+
               <AnimatePresence>
                 {loading && (
                   <motion.div 
