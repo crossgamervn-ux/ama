@@ -479,20 +479,6 @@ Beyond All Reason.
                 <span className="text-[10px] text-slate-500 mt-1 uppercase">Max size 10MB</span>
               </div>
               
-              <div className="mt-4">
-                <textarea 
-                  className="w-full h-24 bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors custom-scrollbar"
-                  placeholder="Or paste your log text here..."
-                  value={fileContent}
-                  onChange={(e) => {
-                    setFileContent(e.target.value);
-                    if (e.target.value.trim().length > 0) {
-                      parseLogContent(e.target.value);
-                    }
-                  }}
-                ></textarea>
-              </div>
-
               <AnimatePresence>
                 {loading && (
                   <motion.div 
