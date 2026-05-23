@@ -83,7 +83,48 @@ export default function App() {
   const isEcoUnit = (unitId: string): boolean => {
     const name = getUnitName(unitId).toLowerCase();
     const desc = getUnitDescription(unitId).toLowerCase();
-    return ['metal', 'tidal', 'solar', 'energy', 'wind', 'geothermal', 'fusion', 'storage', 'converter', 'maker'].some(k => name.includes(k) || desc.includes(k));
+    const id = unitId.toLowerCase();
+
+    // Loại bỏ các thiết bị lưu trữ (storage) khỏi nhóm Eco
+    if (name.includes('storage') || desc.includes('storage') || id.includes('estor') || id.includes('mstor')) {
+      return false;
+    }
+
+    const keywords = [
+      'metal', 'tidal', 'tide', 'solar', 'solor', 'energy', 'wind', 
+      'geothermal', 'geo', 'fusion', 'converter', 'maker', 'reactor', 
+      'powerplant', 'extractor', 'mex', 'moho', 'econv'
+    ];
+    return keywords.some(k => name.includes(k) || desc.includes(k) || id.includes(k));
+  };
+
+  const getPrefixWeight = (prefix: string): number => {
+    if (parserMode === 'suppressor') {
+      const p = prefix.toLowerCase();
+      let value = 0;
+      const mkMatch = p.match(/m?k\.?\s*(\d+)/);
+      if (mkMatch) {
+          value = parseInt(mkMatch[1], 10);
+      }
+      if (p.includes('cursed')) return -value; 
+      return value;
+    }
+    const p = prefix.toLowerCase();
+    const order = [
+      'uncommon', 'rare', 'exceptional', 'epic', 'exotic', 'legendary', 
+      'mythical', 'miracle', 'divine', 'eternal', 'supreme', 'omega', 
+      'unique', 'jackpot', 'immortal', 'absurd', 'godlike', 'toorng', 
+      'insanely lucky', 'dope', 'admin', 'god', 'error', 'super sayan', 
+      'beyond', 'mggw', 'ambo'
+    ];
+    
+    for (let i = order.length - 1; i >= 0; i--) {
+      const keyword = order[i];
+      if (keyword === 'god' && p.includes('godlike')) continue;
+      if (p.includes(keyword)) return i + 1;
+    }
+    if (p.includes('cursed') || p.includes('malicious')) return -1;
+    return 0;
   };
 
   const getFactionInfo = (unitId: string): FactionInfo => {
@@ -243,39 +284,6 @@ export default function App() {
     
     setError(null);
 
-    const getPrefixWeight = (prefix: string): number => {
-      // In Suppressor mode, sort by MK number
-      if (parserMode === 'suppressor') {
-        const p = prefix.toLowerCase();
-        let value = 0;
-        const mkMatch = p.match(/m?k\.?\s*(\d+)/);
-        if (mkMatch) {
-            value = parseInt(mkMatch[1], 10);
-        }
-        // If it's cursed, you might want to penalize it or handle it separately, 
-        // but user says "MK càng cao càng mạnh", we'll just use MK value.
-        // If we want cursed to be at bottom, we can do:
-        if (p.includes('cursed')) return -value; 
-        return value;
-      }
-      const p = prefix.toLowerCase();
-      const order = [
-        'uncommon', 'rare', 'exceptional', 'epic', 'exotic', 'legendary', 
-        'mythical', 'miracle', 'divine', 'eternal', 'supreme', 'omega', 
-        'unique', 'jackpot', 'immortal', 'absurd', 'godlike', 'toorng', 
-        'insanely lucky', 'dope', 'admin', 'god', 'error', 'super sayan', 
-        'beyond', 'mggw', 'ambo'
-      ];
-      
-      for (let i = order.length - 1; i >= 0; i--) {
-        const keyword = order[i];
-        if (keyword === 'god' && p.includes('godlike')) continue;
-        if (p.includes(keyword)) return i + 1;
-      }
-      if (p.includes('cursed') || p.includes('malicious')) return -1;
-      return 0;
-    };
-
     // Chuyển từ Map sang Array và giữ nguyên logic sort cũ của bạn
     const latestBlock = Array.from(currentMatchMap.values()).sort((a, b) => {
       const weightA = getPrefixWeight(a.prefix);
@@ -391,12 +399,27 @@ Beyond All Reason.
     }
   };
 
-  const filteredResults = results.filter(item => {
-    if (factionFilter === 'ALL') return true;
-    if (factionFilter === 'Eco') return isEcoUnit(item.unitId);
-    if (factionFilter === 'Sniper') return item.prefix.toLowerCase().includes('sniper');
-    return getFactionInfo(item.unitId).name === factionFilter;
-  });
+  const filteredResults = (() => {
+    const list = results.filter(item => {
+      if (factionFilter === 'ALL') return true;
+      if (factionFilter === 'Eco') return isEcoUnit(item.unitId);
+      if (factionFilter === 'Sniper') return item.prefix.toLowerCase().includes('sniper');
+      return getFactionInfo(item.unitId).name === factionFilter;
+    });
+
+    if (factionFilter === 'Eco') {
+      return [...list].sort((a, b) => {
+        const weightA = getPrefixWeight(a.prefix);
+        const weightB = getPrefixWeight(b.prefix);
+        if (weightA !== weightB) {
+          return weightA - weightB;
+        }
+        return a.unitId.localeCompare(b.unitId);
+      });
+    }
+
+    return list;
+  })();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans relative overflow-hidden flex flex-col p-4 md:p-8">
