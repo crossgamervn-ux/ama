@@ -85,8 +85,40 @@ export default function App() {
     const desc = getUnitDescription(unitId).toLowerCase();
     const id = unitId.toLowerCase();
 
-    // 1. Loại bỏ các thiết bị lưu trữ (storage) khỏi nhóm Eco
-    if (name.includes('storage') || desc.includes('storage') || id.includes('estor') || id.includes('mstor')) {
+    // 1. Loại bỏ các thiết bị lưu trữ THUẦN TÚY (pure storage), vẫn giữ lại các mỏ tự phát điện/trích xuất có kèm lưu trữ (như armmoho / Advanced Metal Extractor / Storage)
+    const isPureStorage = (
+      name.includes('storage') || 
+      desc.includes('storage') || 
+      id.includes('estor') || 
+      id.includes('mstor') ||
+      id.includes('store')
+    ) && !(
+      name.includes('extractor') ||
+      name.includes('exploiter') ||
+      name.includes('moho') ||
+      name.includes('converter') ||
+      name.includes('fission') ||
+      name.includes('fusion') ||
+      name.includes('solar') ||
+      name.includes('wind') ||
+      name.includes('tidal') ||
+      name.includes('geothermal') ||
+      name.includes('reactor') ||
+      name.includes('generator') ||
+      name.includes('power') ||
+      name.includes('plant') ||
+      id.includes('mex') ||
+      id.includes('mexp') ||
+      id.includes('moho') ||
+      id.includes('econv') ||
+      id.includes('makr') ||
+      id.includes('mmkr') ||
+      (desc.includes('extract') && desc.includes('metal')) ||
+      (desc.includes('produces') && desc.includes('energy')) ||
+      desc.includes('convert')
+    );
+
+    if (isPureStorage) {
       return false;
     }
 
@@ -128,6 +160,7 @@ export default function App() {
     const isEnergyConverter = (
       name.includes('converter') || 
       desc.includes('converts energy') ||
+      (desc.includes('convert') && desc.includes('energy')) ||
       id.includes('makr') || 
       id.includes('mmkr') || 
       id.includes('econv')
@@ -141,7 +174,8 @@ export default function App() {
       id.includes('mex') || 
       id.includes('mexp') || 
       id.includes('moho') || 
-      desc.includes('extracts metal')
+      desc.includes('extracts metal') ||
+      (desc.includes('extract') && desc.includes('metal'))
     );
 
     return isEnergyProducer || isEnergyConverter || isMetalExtractor;
