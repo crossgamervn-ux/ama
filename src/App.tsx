@@ -85,17 +85,66 @@ export default function App() {
     const desc = getUnitDescription(unitId).toLowerCase();
     const id = unitId.toLowerCase();
 
-    // Loại bỏ các thiết bị lưu trữ (storage) khỏi nhóm Eco
+    // 1. Loại bỏ các thiết bị lưu trữ (storage) khỏi nhóm Eco
     if (name.includes('storage') || desc.includes('storage') || id.includes('estor') || id.includes('mstor')) {
       return false;
     }
 
-    const keywords = [
-      'metal', 'tidal', 'tide', 'solar', 'solor', 'energy', 'wind', 
-      'geothermal', 'geo', 'fusion', 'converter', 'maker', 'reactor', 
-      'powerplant', 'extractor', 'mex', 'moho', 'econv'
+    // 2. Loại bỏ các thiết bị giả lập (decoy)
+    if (name.includes('decoy') || desc.includes('decoy')) {
+      return false;
+    }
+
+    // 3. Loại bỏ các thiết bị chiến đấu / phòng thủ / lá chắn / radar
+    const combatKeywords = [
+      'weapon', 'defense', 'defence', 'shield', 'cannon', 'turret', 
+      'gate', 'target', 'tactical', 'battery', 'command', 'beam', 'radar'
     ];
-    return keywords.some(k => name.includes(k) || desc.includes(k) || id.includes(k));
+    if (combatKeywords.some(kw => name.includes(kw) || desc.includes(kw))) {
+      // Ngoại trừ các cơ sở khai thác có trang bị vũ khí tự vệ tự động như Exploiter
+      const isArmedExtractor = name.includes('exploiter') || id.includes('mexp') || id.includes('xp');
+      if (!isArmedExtractor) {
+        return false;
+      }
+    }
+
+    // 4. Phân loại theo 3 nhóm chính:
+    
+    // Nhóm A: Cung cấp năng lượng (Energy production)
+    const isEnergyProducer = (
+       // Bất kỳ đơn vị nào có mô tả "produces energy" (tránh "does not produce energy")
+       (desc.includes('produces') && desc.includes('energy') && !desc.includes('does not produce energy')) ||
+       // Hoặc các từ khóa tên gọi đặc trưng của máy phát điện
+       (
+         (name.includes('solar') && name.includes('collector')) ||
+         (name.includes('wind') && name.includes('turbine')) ||
+         (name.includes('tidal') && (name.includes('generator') || name.includes('power'))) ||
+         (name.includes('geothermal') && (name.includes('powerplant') || name.includes('plant'))) ||
+         (name.includes('fusion') && (name.includes('reactor') || name.includes('plant')))
+       )
+    );
+
+    // Nhóm B: Chuyển đổi năng lượng (Energy converters)
+    const isEnergyConverter = (
+      name.includes('converter') || 
+      desc.includes('converts energy') ||
+      id.includes('makr') || 
+      id.includes('mmkr') || 
+      id.includes('econv')
+    );
+
+    // Nhóm C: Trích xuất metal (Metal extractors)
+    const isMetalExtractor = (
+      name.includes('extractor') || 
+      name.includes('exploiter') || 
+      name.includes('moho') ||
+      id.includes('mex') || 
+      id.includes('mexp') || 
+      id.includes('moho') || 
+      desc.includes('extracts metal')
+    );
+
+    return isEnergyProducer || isEnergyConverter || isMetalExtractor;
   };
 
   const getPrefixWeight = (prefix: string): number => {
